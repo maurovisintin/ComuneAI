@@ -1,0 +1,32 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@layer theme {
+  @theme {
+    --color-app-bg: #ffffff;
+    --color-app-bg-2: #f2f2f7;
+    --color-app-text: #000000;
+    --color-app-text-2: #6c6c70;
+    --color-app-tint: #007aff;
+    --color-bubble-user: #007aff;
+    --color-bubble-user-text: #ffffff;
+    --color-bubble-assistant: #f2f2f7;
+    --color-app-separator: #d1d1d6;
+
+    --text-xs: 12px;
+    --text-xs--line-height: 16px;
+    --text-sm: 14px;
+    --text-sm--line-height: 20px;
+    --text-base: 16px;
+    --text-base--line-height: 22px;
+    --text-lg: 18px;
+    --text-lg--line-height: 24px;
+    --text-xl: 20px;
+    --text-xl--line-height: 26px;
+    --text-2xl: 24px;
+    --text-2xl--line-height: 30px;
+
+    --spacing: 4px;
+  }
+}
