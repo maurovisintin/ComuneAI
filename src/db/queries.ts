@@ -6,6 +6,7 @@ export type Conversation = {
   id: string;
   tenantSlug: string;
   title: string;
+  category: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -22,6 +23,7 @@ type ConversationRow = {
   id: string;
   tenant_slug: string;
   title: string;
+  category: string | null;
   created_at: number;
   updated_at: number;
 };
@@ -38,6 +40,7 @@ const toConversation = (r: ConversationRow): Conversation => ({
   id: r.id,
   tenantSlug: r.tenant_slug,
   title: r.title,
+  category: r.category ?? null,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
 });
@@ -70,13 +73,14 @@ export function createConversation(tenantSlug: string): Conversation {
   const now = Date.now();
   const id = uuid();
   getDb().runSync(
-    "INSERT INTO conversations (id, tenant_slug, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO conversations (id, tenant_slug, title, category, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)",
     [id, tenantSlug, "Nuova chat", now, now]
   );
   return {
     id,
     tenantSlug,
     title: "Nuova chat",
+    category: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -90,10 +94,14 @@ export function getConversation(id: string): Conversation | null {
   return row ? toConversation(row) : null;
 }
 
-export function updateConversationTitle(id: string, title: string): void {
+export function updateConversationTitle(
+  id: string,
+  title: string,
+  category: string | null
+): void {
   getDb().runSync(
-    "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
-    [title, Date.now(), id]
+    "UPDATE conversations SET title = ?, category = ?, updated_at = ? WHERE id = ?",
+    [title, category, Date.now(), id]
   );
 }
 

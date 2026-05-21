@@ -1,5 +1,4 @@
 import { Redirect, Stack, useLocalSearchParams } from "expo-router";
-
 import { findTenant } from "@/tenants/config";
 
 export default function TenantLayout() {
@@ -11,13 +10,9 @@ export default function TenantLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerBackButtonDisplayMode: "minimal",
-      }}
-    >
-      <Stack.Screen name="index" options={{ title: tenantConfig.name }} />
-      <Stack.Screen name="c/[id]" options={{ title: "Chat" }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="c/[id]" />
     </Stack>
   );
 }

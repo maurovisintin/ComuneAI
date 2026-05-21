@@ -1,46 +1,19 @@
 import { View } from "react-native";
+import { SvgIcon } from "./icons/svg-icon";
 
 export function MicIcon({
-  size = 18,
+  size = 20,
   color = "#ffffff",
 }: {
   size?: number;
   color?: string;
 }) {
-  const capsuleW = size * 0.42;
-  const capsuleH = size * 0.55;
-  const standW = size * 0.7;
-
   return (
     <View
-      style={{ width: size, height: size, alignItems: "center" }}
-      accessibilityLabel="Microfono"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     >
-      <View
-        style={{
-          width: capsuleW,
-          height: capsuleH,
-          backgroundColor: color,
-          borderRadius: capsuleW / 2,
-          marginTop: size * 0.05,
-        }}
-      />
-      <View
-        style={{
-          width: standW * 0.55,
-          height: 2,
-          backgroundColor: color,
-          marginTop: size * 0.08,
-        }}
-      />
-      <View
-        style={{
-          width: standW,
-          height: 2,
-          backgroundColor: color,
-          marginTop: size * 0.05,
-        }}
-      />
+      <SvgIcon name="mic" size={size} color={color} strokeWidth={1.8} />
     </View>
   );
 }
@@ -60,7 +33,8 @@ export function StopIcon({
         backgroundColor: color,
         borderRadius: 2,
       }}
-      accessibilityLabel="Ferma registrazione"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     />
   );
 }

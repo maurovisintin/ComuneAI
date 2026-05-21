@@ -1,6 +1,6 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
-export const SCHEMA_SQL = `
+export const SCHEMA_V1_SQL = `
 CREATE TABLE IF NOT EXISTS conversations (
   id TEXT PRIMARY KEY,
   tenant_slug TEXT NOT NULL,
@@ -20,4 +20,8 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 CREATE INDEX IF NOT EXISTS messages_conversation_idx
   ON messages(conversation_id, created_at);
+`;
+
+export const SCHEMA_V2_SQL = `
+ALTER TABLE conversations ADD COLUMN category TEXT;
 `;

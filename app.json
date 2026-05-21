@@ -35,7 +35,8 @@
           "microphonePermission": "Consenti l'accesso al microfono per dettare i messaggi all'assistente del Comune.",
           "speechRecognitionPermission": "Consenti il riconoscimento vocale per trasformare la tua voce in testo."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

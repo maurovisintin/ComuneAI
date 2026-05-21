@@ -5,14 +5,15 @@
 @layer theme {
   @theme {
     --color-app-bg: #ffffff;
-    --color-app-bg-2: #f2f2f7;
-    --color-app-text: #000000;
-    --color-app-text-2: #6c6c70;
-    --color-app-tint: #007aff;
-    --color-bubble-user: #007aff;
-    --color-bubble-user-text: #ffffff;
-    --color-bubble-assistant: #f2f2f7;
-    --color-app-separator: #d1d1d6;
+    --color-app-bg-2: #f4f6fa;
+    --color-app-bg-3: #fafbfd;
+    --color-app-text: #0e1b33;
+    --color-app-text-2: #5a6680;
+    --color-app-tint: #0b3d91;
+    --color-bubble-user: #eef2fa;
+    --color-bubble-user-text: #0e1b33;
+    --color-bubble-assistant: #f4f6fa;
+    --color-app-separator: #d6dbe5;
 
     --text-xs: 12px;
     --text-xs--line-height: 16px;

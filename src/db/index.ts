@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema";
+import { SCHEMA_V1_SQL, SCHEMA_V2_SQL, SCHEMA_VERSION } from "./schema";
 
 const DB_NAME = "comuni-chat.db";
 
@@ -20,10 +20,20 @@ function initialize(db: SQLite.SQLiteDatabase): void {
   const row = db.getFirstSync<{ user_version: number }>(
     "PRAGMA user_version;"
   );
-  const current = row?.user_version ?? 0;
+  let current = row?.user_version ?? 0;
 
-  if (current < SCHEMA_VERSION) {
-    db.execSync(SCHEMA_SQL);
-    db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION};`);
+  if (current < 1) {
+    db.execSync(SCHEMA_V1_SQL);
+    current = 1;
   }
+  if (current < 2) {
+    try {
+      db.execSync(SCHEMA_V2_SQL);
+    } catch {
+      // Column may already exist if the table was created fresh under v2.
+    }
+    current = 2;
+  }
+
+  db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION};`);
 }
