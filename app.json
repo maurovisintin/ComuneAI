@@ -28,7 +28,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Consenti l'accesso al microfono per dettare i messaggi all'assistente del Comune.",
+          "speechRecognitionPermission": "Consenti il riconoscimento vocale per trasformare la tua voce in testo."
+        }
+      ]
     ]
   }
 }
