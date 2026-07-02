@@ -1,5 +1,6 @@
 import { fetch as expoFetch } from "expo/fetch";
-import { mockStream } from "./mock-stream";
+import type { MessageMeta } from "@/db/queries";
+import { mockAnswerFor } from "./mock-answers";
 
 export type ChatRole = "user" | "assistant" | "system";
 
@@ -15,18 +16,43 @@ export type StreamChatArgs = {
   signal?: AbortSignal;
 };
 
+export type StreamEvent =
+  | { type: "text"; chunk: string }
+  | { type: "meta"; meta: MessageMeta };
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+async function* mockStream(
+  args: StreamChatArgs
+): AsyncGenerator<StreamEvent> {
+  const lastUser = [...args.messages]
+    .reverse()
+    .find((m) => m.role === "user");
+  const answer = mockAnswerFor(lastUser?.content ?? "");
+
+  // Simulated "sta scrivendo…" pause before the reply streams in.
+  await new Promise((r) => setTimeout(r, 1100));
+  if (args.signal?.aborted) return;
+
+  const tokens = answer.text.split(/(\s+)/);
+  for (const token of tokens) {
+    if (args.signal?.aborted) return;
+    await new Promise((r) => setTimeout(r, 30));
+    yield { type: "text", chunk: token };
+  }
+  yield { type: "meta", meta: answer.meta };
+}
 
 export async function* streamChat(
   args: StreamChatArgs
-): AsyncGenerator<string> {
+): AsyncGenerator<StreamEvent> {
   if (!API_URL) {
     if (!__DEV__) {
       throw new Error(
         "EXPO_PUBLIC_API_URL is not configured. Set it in your environment."
       );
     }
-    yield* mockStream(args.signal);
+    yield* mockStream(args);
     return;
   }
 
@@ -60,7 +86,7 @@ export async function* streamChat(
       const { value, done } = await reader.read();
       if (done) return;
       if (value) {
-        yield decoder.decode(value, { stream: true });
+        yield { type: "text", chunk: decoder.decode(value, { stream: true }) };
       }
     }
   } finally {

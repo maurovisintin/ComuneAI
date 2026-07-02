@@ -50,7 +50,7 @@ export function useSpeechRecognition() {
     }));
   });
 
-  const start = useCallback(async (lang = "it-IT") => {
+  const start = useCallback(async (lang = "it-IT", options?: { continuous?: boolean }) => {
     const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!perm.granted) {
       setState((s) => ({
@@ -64,7 +64,7 @@ export function useSpeechRecognition() {
     ExpoSpeechRecognitionModule.start({
       lang,
       interimResults: true,
-      continuous: true,
+      continuous: options?.continuous ?? true,
       addsPunctuation: true,
     });
     return true;

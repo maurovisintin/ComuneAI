@@ -1,48 +1,54 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
-  View,
   Text,
+  View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
-import {
-  C,
-  FONT_FAMILY,
-  FONT_FAMILY_BOLD,
-  FONT_FAMILY_MEDIUM,
-} from "@/design/tokens";
-import { ComuneHeader } from "@/components/comune-header";
+import { C, FONT } from "@/design/tokens";
+import { BrandGradient } from "@/components/brand-gradient";
+import { Icon } from "@/components/icons/icon";
 import { MessageBubble } from "@/components/chat/message-bubble";
-import { Composer, type ComposerHandle } from "@/components/chat/composer";
-import { EmptyChat } from "@/components/chat/empty-chat";
+import { TypingDots } from "@/components/chat/typing-dots";
+import { AdCard } from "@/components/chat/ad-card";
+import { Composer } from "@/components/chat/composer";
+import { useTenantUI } from "@/context/tenant-ui";
 import {
-  getConversation,
   insertMessage,
   listMessages,
   setMessageContent,
+  setMessageMeta,
   touchConversation,
   updateConversationTitle,
   type Message,
 } from "@/db/queries";
 import { findTenant } from "@/tenants/config";
 import { streamChat, type ChatMessage } from "@/api/chat";
-import { inferCategory, categoryStyle } from "@/utils/categorise";
-import { shortItalianTime } from "@/utils/group-conversations";
-import type { Suggestion } from "@/suggestions/config";
+import { inferCategory } from "@/utils/categorise";
 
 export default function ChatScreen() {
-  const { tenant, id } = useLocalSearchParams<{ tenant: string; id: string }>();
+  const { tenant, id, q } = useLocalSearchParams<{
+    tenant: string;
+    id: string;
+    q?: string;
+  }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
+  const { openDrawer } = useTenantUI();
+  const [typing, setTyping] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const composerRef = useRef<ComposerHandle>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const autoSentRef = useRef(false);
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["messages", id],
@@ -57,14 +63,10 @@ export default function ChatScreen() {
 
   const tenantConfig = findTenant(tenant);
 
-  const conversation = useMemo(() => getConversation(id), [id, messages.length]);
-  const category = conversation?.category ?? "Generale";
-  const catStyle = categoryStyle(category);
-
   const handleSend = async (text: string) => {
-    if (!tenantConfig) return;
+    if (!tenantConfig || streaming) return;
 
-    const isFirstTurn = messages.length === 0;
+    const isFirstTurn = listMessages(id).length === 0;
 
     insertMessage(id, "user", text);
     const assistantMsg = insertMessage(id, "assistant", "");
@@ -85,112 +87,182 @@ export default function ChatScreen() {
     const controller = new AbortController();
     abortRef.current = controller;
     setStreaming(true);
+    setTyping(true);
 
     let buffer = "";
     try {
-      for await (const chunk of streamChat({
+      for await (const event of streamChat({
         tenantSlug: tenant,
         systemPrompt: tenantConfig.systemPrompt,
         messages: history,
         signal: controller.signal,
       })) {
         if (controller.signal.aborted) break;
-        buffer += chunk;
-        setMessageContent(assistantMsg.id, buffer);
-        queryClient.setQueryData<Message[]>(["messages", id], () => listMessages(id));
+        if (event.type === "text") {
+          buffer += event.chunk;
+          setTyping(false);
+          setMessageContent(assistantMsg.id, buffer);
+        } else {
+          setMessageMeta(assistantMsg.id, event.meta);
+        }
+        queryClient.setQueryData<Message[]>(["messages", id], () =>
+          listMessages(id)
+        );
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore di rete";
       setMessageContent(assistantMsg.id, buffer || `⚠️ ${message}`);
-      queryClient.setQueryData<Message[]>(["messages", id], () => listMessages(id));
+      queryClient.setQueryData<Message[]>(["messages", id], () =>
+        listMessages(id)
+      );
     } finally {
       touchConversation(id);
       queryClient.invalidateQueries({ queryKey: ["conversations", tenant] });
       setStreaming(false);
+      setTyping(false);
       abortRef.current = null;
       AccessibilityInfo.announceForAccessibility(buffer || "Risposta completata");
     }
   };
 
-  const handleSuggestion = (s: Suggestion) => {
-    composerRef.current?.setText(s.q, { focus: true });
-  };
+  // Auto-send the question handed over from Home / voice.
+  useEffect(() => {
+    if (!q || autoSentRef.current) return;
+    autoSentRef.current = true;
+    if (listMessages(id).length === 0) {
+      handleSend(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, id]);
 
   if (!tenantConfig) return null;
 
-  const hasMessages = messages.length > 0;
+  const firstAssistantIdx = messages.findIndex(
+    (m) => m.role === "assistant" && m.content !== ""
+  );
+  const lastMessage = messages[messages.length - 1];
+  const showAd = (m: Message, idx: number) =>
+    idx === firstAssistantIdx && !(streaming && m.id === lastMessage?.id);
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ComuneHeader
-        variant="comune"
-        tenant={tenantConfig}
-        onBack={() => router.back()}
-      />
-
-      {hasMessages && conversation && (
-        <View
+    <Animated.View
+      entering={FadeInDown.duration(300)}
+      style={{ flex: 1, backgroundColor: C.bg }}
+    >
+      {/* header */}
+      <View
+        style={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 14,
+          paddingBottom: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          backgroundColor: "rgba(255,255,255,0.86)",
+          borderBottomWidth: 1,
+          borderBottomColor: C.hairline,
+        }}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Indietro"
+          accessibilityLanguage="it-IT"
           style={{
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            backgroundColor: C.bgSofter,
-            borderBottomWidth: 1,
-            borderBottomColor: C.borderSoft,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
+          <Icon name="arrow-left" size={22} color={C.fg1} />
+        </Pressable>
+        <BrandGradient
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="compass" size={22} color="#FFFFFF" />
+        </BrandGradient>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text
             numberOfLines={1}
-            style={{
-              fontSize: 13.5,
-              color: C.ink,
-              fontFamily: FONT_FAMILY_BOLD,
-            }}
+            accessibilityRole="header"
+            accessibilityLanguage="it-IT"
+            style={{ fontFamily: FONT.bold, fontSize: 16, color: C.fg1 }}
           >
-            {conversation.title}
+            {tenantConfig.name}
           </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.textMuted,
-              marginTop: 1,
-              fontFamily: FONT_FAMILY,
-            }}
-          >
-            <Text style={{ color: catStyle.accent, fontFamily: FONT_FAMILY_MEDIUM }}>
-              {category}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: C.ok,
+              }}
+            />
+            <Text
+              accessibilityLanguage="it-IT"
+              style={{ fontFamily: FONT.medium, fontSize: 12, color: C.ok }}
+            >
+              Assistente · online
             </Text>
-            {" · "}
-            {shortItalianTime(conversation.updatedAt)}
-          </Text>
+          </View>
         </View>
-      )}
+        <Pressable
+          onPress={openDrawer}
+          accessibilityRole="button"
+          accessibilityLabel="Apri il menu"
+          accessibilityLanguage="it-IT"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="menu" size={24} color={C.fg2} />
+        </Pressable>
+      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingTop: hasMessages ? 18 : 0, paddingBottom: 8 }}
+          contentContainerStyle={{
+            paddingTop: 16,
+            paddingHorizontal: 14,
+            paddingBottom: 12,
+          }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
-          {hasMessages ? (
-            messages.map((m) => <MessageBubble key={m.id} message={m} />)
-          ) : (
-            <EmptyChat tenant={tenantConfig} onSuggestionPress={handleSuggestion} />
-          )}
+          {messages.map((m, idx) => {
+            if (m.role === "assistant" && m.content === "") return null;
+            return (
+              <View key={m.id}>
+                <MessageBubble message={m} />
+                {m.role === "assistant" && showAd(m, idx) && (
+                  <AdCard comuneName={tenantConfig.name} />
+                )}
+              </View>
+            );
+          })}
+          {typing && <TypingDots />}
         </ScrollView>
-        <Composer
-          ref={composerRef}
-          onSend={handleSend}
-          disabled={streaming}
-          placeholder={
-            hasMessages ? "Continua la conversazione…" : "Scrivi la tua domanda al Comune…"
-          }
-        />
+        <Composer onSend={handleSend} disabled={streaming} />
       </KeyboardAvoidingView>
-    </View>
+    </Animated.View>
   );
 }

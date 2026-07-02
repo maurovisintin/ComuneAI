@@ -11,11 +11,26 @@ export type Conversation = {
   updatedAt: number;
 };
 
+export type MessageSource = {
+  label: string;
+  /** Short mono reference, e.g. "art. 8" */
+  meta?: string;
+  /** External link (renders the external-link icon). */
+  ext?: boolean;
+};
+
+export type MessageMeta = {
+  highlight?: { title: string; lines: string[] };
+  sources?: MessageSource[];
+  verified?: boolean;
+};
+
 export type Message = {
   id: string;
   conversationId: string;
   role: Role;
   content: string;
+  meta: MessageMeta | null;
   createdAt: number;
 };
 
@@ -33,6 +48,7 @@ type MessageRow = {
   conversation_id: string;
   role: Role;
   content: string;
+  meta: string | null;
   created_at: number;
 };
 
@@ -45,11 +61,21 @@ const toConversation = (r: ConversationRow): Conversation => ({
   updatedAt: r.updated_at,
 });
 
+const parseMeta = (raw: string | null): MessageMeta | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as MessageMeta;
+  } catch {
+    return null;
+  }
+};
+
 const toMessage = (r: MessageRow): Message => ({
   id: r.id,
   conversationId: r.conversation_id,
   role: r.role,
   content: r.content,
+  meta: parseMeta(r.meta),
   createdAt: r.created_at,
 });
 
@@ -135,7 +161,7 @@ export function insertMessage(
     "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
     [id, conversationId, role, content, now]
   );
-  return { id, conversationId, role, content, createdAt: now };
+  return { id, conversationId, role, content, meta: null, createdAt: now };
 }
 
 export function setMessageContent(id: string, content: string): void {
@@ -143,4 +169,66 @@ export function setMessageContent(id: string, content: string): void {
     content,
     id,
   ]);
+}
+
+export function setMessageMeta(id: string, meta: MessageMeta): void {
+  getDb().runSync("UPDATE messages SET meta = ? WHERE id = ?", [
+    JSON.stringify(meta),
+    id,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// Segnalazioni (citizen reports)
+// ---------------------------------------------------------------------------
+
+export type ReportState = "Ricevuta" | "In lavorazione" | "Risolta";
+
+export type Report = {
+  id: string;
+  tenantSlug: string;
+  category: string;
+  text: string;
+  state: ReportState;
+  createdAt: number;
+};
+
+type ReportRow = {
+  id: string;
+  tenant_slug: string;
+  category: string;
+  text: string;
+  state: ReportState;
+  created_at: number;
+};
+
+const toReport = (r: ReportRow): Report => ({
+  id: r.id,
+  tenantSlug: r.tenant_slug,
+  category: r.category,
+  text: r.text,
+  state: r.state,
+  createdAt: r.created_at,
+});
+
+export function listReports(tenantSlug: string): Report[] {
+  const rows = getDb().getAllSync<ReportRow>(
+    "SELECT * FROM reports WHERE tenant_slug = ? ORDER BY created_at DESC",
+    [tenantSlug]
+  );
+  return rows.map(toReport);
+}
+
+export function createReport(
+  tenantSlug: string,
+  category: string,
+  text: string
+): Report {
+  const now = Date.now();
+  const id = uuid();
+  getDb().runSync(
+    "INSERT INTO reports (id, tenant_slug, category, text, state, created_at) VALUES (?, ?, ?, ?, 'Ricevuta', ?)",
+    [id, tenantSlug, category, text, now]
+  );
+  return { id, tenantSlug, category, text, state: "Ricevuta", createdAt: now };
 }

@@ -1,7 +1,8 @@
-import { View, Text } from "react-native";
-import { C, FONT_FAMILY, FONT_FAMILY_BOLD, FONT_FAMILY_MEDIUM } from "@/design/tokens";
-import { MiniLogoMark } from "@/components/icons/logo-mark";
-import { SvgIcon } from "@/components/icons/svg-icon";
+import { Pressable, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+
+import { C, FONT } from "@/design/tokens";
+import { Icon } from "@/components/icons/icon";
 import type { Message } from "@/db/queries";
 
 export function MessageBubble({ message }: { message: Message }) {
@@ -9,100 +10,224 @@ export function MessageBubble({ message }: { message: Message }) {
 
   if (isUser) {
     return (
-      <View
-        style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, marginBottom: 18 }}
+      <Animated.View
+        entering={FadeInDown.duration(260)}
         accessible
         accessibilityRole="text"
         accessibilityLabel={`Tu: ${message.content}`}
         accessibilityLanguage="it-IT"
+        style={{
+          alignSelf: "flex-end",
+          maxWidth: "84%",
+          backgroundColor: C.acc,
+          paddingVertical: 11,
+          paddingHorizontal: 15,
+          borderRadius: 20,
+          borderBottomRightRadius: 7,
+          marginBottom: 14,
+          shadowColor: "#0E1726",
+          shadowOpacity: 0.1,
+          shadowOffset: { width: 0, height: 1 },
+          shadowRadius: 2,
+          elevation: 1,
+        }}
       >
-        <View
+        <Text
           style={{
-            maxWidth: "82%",
-            backgroundColor: C.userBubble,
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            borderTopLeftRadius: 14,
-            borderTopRightRadius: 14,
-            borderBottomRightRadius: 4,
-            borderBottomLeftRadius: 14,
-            borderWidth: 1,
-            borderColor: C.borderSoft,
+            fontFamily: FONT.regular,
+            fontSize: 16,
+            lineHeight: 23,
+            color: "#FFFFFF",
           }}
         >
-          <Text style={{ fontSize: 14.5, color: C.ink, lineHeight: 22, fontFamily: FONT_FAMILY }}>
-            {message.content}
-          </Text>
-        </View>
-      </View>
+          {message.content}
+        </Text>
+      </Animated.View>
     );
   }
 
-  const text = message.content || "…";
+  const meta = message.meta;
 
   return (
-    <View
-      style={{ paddingHorizontal: 16, marginBottom: 22 }}
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={`Assistente: ${message.content || "sto scrivendo"}`}
-      accessibilityLanguage="it-IT"
+    <Animated.View
+      entering={FadeInDown.duration(280)}
+      style={{
+        alignSelf: "flex-start",
+        maxWidth: "90%",
+        gap: 8,
+        marginBottom: 14,
+      }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <MiniLogoMark size={24} />
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 11.5, color: C.text, fontFamily: FONT_FAMILY_BOLD }}>
-            Assistente del Comune
-          </Text>
-          <View
+      <View
+        accessible
+        accessibilityRole="text"
+        accessibilityLabel={`Assistente: ${message.content}`}
+        accessibilityLanguage="it-IT"
+        style={{
+          backgroundColor: C.card,
+          borderWidth: 1,
+          borderColor: C.hairline,
+          paddingVertical: 13,
+          paddingHorizontal: 16,
+          borderRadius: 20,
+          borderBottomLeftRadius: 7,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: FONT.regular,
+            fontSize: 16,
+            lineHeight: 24,
+            color: C.fg1,
+          }}
+        >
+          {message.content}
+        </Text>
+      </View>
+
+      {meta?.highlight && (
+        <View
+          accessible
+          accessibilityLanguage="it-IT"
+          style={{
+            backgroundColor: C.accSoft,
+            borderRadius: 16,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            gap: 9,
+          }}
+        >
+          <Text
             style={{
-              backgroundColor: C.greenSoft,
-              paddingHorizontal: 5,
-              paddingVertical: 1,
-              borderRadius: 2,
+              fontFamily: FONT.bold,
+              fontSize: 11,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+              color: C.accInk,
             }}
           >
-            <Text
-              style={{
-                fontSize: 9.5,
-                color: C.greenInk,
-                fontFamily: FONT_FAMILY_BOLD,
-                letterSpacing: 0.4,
-              }}
+            {meta.highlight.title}
+          </Text>
+          {meta.highlight.lines.map((line) => (
+            <View
+              key={line}
+              style={{ flexDirection: "row", alignItems: "flex-start", gap: 9 }}
             >
-              VERIFICATO
-            </Text>
-          </View>
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: C.accInk,
+                  marginTop: 7,
+                }}
+              />
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: FONT.medium,
+                  fontSize: 15,
+                  lineHeight: 21,
+                  color: C.fg1,
+                }}
+              >
+                {line}
+              </Text>
+            </View>
+          ))}
         </View>
-      </View>
-      <View style={{ paddingLeft: 32 }}>
-        <Text style={{ fontSize: 14.5, color: C.ink, lineHeight: 22, fontFamily: FONT_FAMILY }}>
-          {text}
-        </Text>
-        <View style={{ flexDirection: "row", gap: 4, marginTop: 10 }}>
-          <View
-            style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
+      )}
+
+      {meta?.sources && meta.sources.length > 0 && (
+        <View style={{ gap: 7 }}>
+          <Text
+            accessibilityLanguage="it-IT"
+            style={{
+              fontFamily: FONT.bold,
+              fontSize: 11,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+              color: C.fg3,
+              marginTop: 2,
+            }}
           >
-            <SvgIcon name="copy" size={14} color={C.textFaint} />
-          </View>
-          <View
-            style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            <SvgIcon name="thumbUp" size={14} color={C.textFaint} />
-          </View>
-          <View
-            style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            <SvgIcon name="refresh" size={14} color={C.textFaint} />
-          </View>
+            Fonti ufficiali
+          </Text>
+          {meta.sources.map((src) => (
+            <Pressable
+              key={src.label}
+              accessibilityRole="button"
+              accessibilityLabel={`Fonte: ${src.label}`}
+              accessibilityLanguage="it-IT"
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                paddingVertical: 11,
+                paddingHorizontal: 13,
+                borderRadius: 13,
+                borderWidth: 1,
+                borderColor: C.stroke,
+                backgroundColor: pressed ? C.sunken : C.card,
+              })}
+            >
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  backgroundColor: C.accSoft,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon
+                  name={src.ext ? "external-link" : "file-text"}
+                  size={16}
+                  color={C.accInk}
+                />
+              </View>
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: FONT.semibold,
+                  fontSize: 13.5,
+                  lineHeight: 18,
+                  color: C.fg1,
+                }}
+              >
+                {src.label}
+              </Text>
+              {src.meta ? (
+                <Text
+                  style={{ fontFamily: FONT.mono, fontSize: 12, color: C.fg4 }}
+                >
+                  {src.meta}
+                </Text>
+              ) : null}
+            </Pressable>
+          ))}
         </View>
-      </View>
-    </View>
+      )}
+
+      {meta?.verified && (
+        <View
+          accessible
+          accessibilityLanguage="it-IT"
+          accessibilityLabel="Verificato dalle fonti del Comune"
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            marginTop: 1,
+          }}
+        >
+          <Icon name="badge-check" size={14} color={C.ok} />
+          <Text style={{ fontFamily: FONT.semibold, fontSize: 12, color: C.ok }}>
+            Verificato dalle fonti del Comune
+          </Text>
+        </View>
+      )}
+    </Animated.View>
   );
 }

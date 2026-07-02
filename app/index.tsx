@@ -24,6 +24,6 @@ export default function Boot() {
   }, []);
 
   if (state.status === "loading") return null;
-  if (state.status === "select") return <Redirect href="/select-tenant" />;
+  if (state.status === "select") return <Redirect href="/welcome" />;
   return <Redirect href={`/${state.slug}`} />;
 }

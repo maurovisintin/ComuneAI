@@ -1,209 +1,258 @@
-import { useMemo, useState } from "react";
-import { FlatList, View, Text, TextInput } from "react-native";
-import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  C,
-  FONT_FAMILY,
-  FONT_FAMILY_BOLD,
-  FONT_FAMILY_MEDIUM,
-} from "@/design/tokens";
-import { ComuneHeader } from "@/components/comune-header";
-import { TrustRow } from "@/components/trust-row";
-import { TenantRow } from "@/components/tenant-row";
-import { SvgIcon } from "@/components/icons/svg-icon";
-import { tenants, type Tenant } from "@/tenants/config";
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
+
+import { C, FONT } from "@/design/tokens";
+import { BrandGradient } from "@/components/brand-gradient";
+import { LogoPin } from "@/components/icons/logo-mark";
+import { Icon } from "@/components/icons/icon";
+import {
+  DEFAULT_TENANT_SLUG,
+  searchTenants,
+  type Tenant,
+} from "@/tenants/config";
 import { setStoredTenantSlug } from "@/tenants/storage";
 
-export default function SelectTenant() {
+export default function SelectTenantScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return tenants;
-    return tenants.filter((t) => t.name.toLowerCase().includes(q));
-  }, [query]);
+  const trimmed = query.trim();
+  const results = searchTenants(trimmed);
 
-  const handlePick = async (tenant: Tenant) => {
-    await setStoredTenantSlug(tenant.slug);
-    router.replace(`/${tenant.slug}`);
+  const pick = async (slug: string) => {
+    await setStoredTenantSlug(slug);
+    router.replace(`/${slug}`);
+  };
+
+  const submitFirst = () => {
+    if (results.length > 0) pick(results[0].slug);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ComuneHeader variant="logo" />
-      <FlatList
-        data={filtered}
-        keyExtractor={(t) => t.slug}
-        renderItem={({ item, index }) => (
-          <View style={{ paddingHorizontal: 8 }}>
-            <TenantRow
-              tenant={item}
-              onPress={handlePick}
-              showBottomBorder={index < filtered.length - 1}
-            />
-          </View>
-        )}
-        ListHeaderComponent={
-          <View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1, backgroundColor: C.card }}
+    >
+      <Animated.View
+        entering={FadeInDown.duration(300)}
+        style={{
+          flex: 1,
+          alignItems: "center",
+          paddingHorizontal: 28,
+          paddingTop: insets.top,
+        }}
+      >
+        <View style={{ height: trimmed ? 40 : 96 }} />
+        <LogoPin size={84} />
+
+        <Text
+          accessibilityRole="header"
+          accessibilityLanguage="it-IT"
+          style={{
+            fontFamily: FONT.extrabold,
+            fontSize: 28,
+            lineHeight: 33,
+            letterSpacing: -0.6,
+            color: C.fg1,
+            textAlign: "center",
+            marginTop: 24,
+          }}
+        >
+          Di quale Comune{"\n"}fai parte?
+        </Text>
+        <Text
+          accessibilityLanguage="it-IT"
+          style={{
+            fontFamily: FONT.regular,
+            fontSize: 16,
+            lineHeight: 24,
+            color: C.fg3,
+            textAlign: "center",
+            marginTop: 10,
+          }}
+        >
+          Cerca il tuo Comune per iniziare.
+        </Text>
+
+        <View
+          style={{
+            width: "100%",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            backgroundColor: C.card,
+            borderWidth: 1.5,
+            borderColor: C.stroke,
+            borderRadius: 999,
+            height: 54,
+            paddingLeft: 20,
+            paddingRight: 5,
+            marginTop: 26,
+          }}
+        >
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={submitFirst}
+            placeholder="Scrivi il nome del Comune…"
+            placeholderTextColor={C.fg4}
+            returnKeyType="search"
+            accessibilityLabel="Cerca il tuo Comune"
+            accessibilityLanguage="it-IT"
+            style={{
+              flex: 1,
+              fontFamily: FONT.regular,
+              fontSize: 16,
+              color: C.fg1,
+              paddingVertical: 0,
+            }}
+          />
+          <BrandGradient
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon name="search" size={21} color="#FFFFFF" />
+          </BrandGradient>
+        </View>
+
+        {trimmed === "" ? (
+          <>
             <View
               style={{
-                paddingHorizontal: 20,
-                paddingTop: 28,
-                paddingBottom: 24,
-                backgroundColor: C.bgSoft,
+                width: "100%",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                marginTop: 18,
               }}
             >
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: C.blue,
-                  fontFamily: FONT_FAMILY_BOLD,
-                  letterSpacing: 1.1,
-                }}
-              >
-                BENVENUTO
-              </Text>
-              <Text
-                accessibilityRole="header"
-                accessibilityLanguage="it-IT"
-                style={{
-                  fontSize: 26,
-                  color: C.ink,
-                  fontFamily: FONT_FAMILY_BOLD,
-                  marginTop: 6,
-                  marginBottom: 10,
-                  lineHeight: 30,
-                  letterSpacing: -0.4,
-                }}
-              >
-                Scegli il tuo Comune per iniziare
-              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: C.stroke }} />
               <Text
                 accessibilityLanguage="it-IT"
-                style={{
-                  fontSize: 14.5,
-                  color: C.textMuted,
-                  lineHeight: 22,
-                  fontFamily: FONT_FAMILY,
-                }}
+                style={{ fontFamily: FONT.semibold, fontSize: 13, color: C.fg4 }}
               >
-                Fai domande sui servizi, le scadenze e i regolamenti del tuo
-                Comune. Nessuna registrazione richiesta.
+                Oppure
               </Text>
-              <TrustRow />
+              <View style={{ flex: 1, height: 1, backgroundColor: C.stroke }} />
             </View>
-
-            <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
-              <View style={{ position: "relative" }}>
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="Cerca il tuo Comune"
-                  placeholderTextColor={C.textMuted}
-                  accessibilityLabel="Cerca il tuo Comune"
-                  accessibilityLanguage="it-IT"
-                  style={{
-                    paddingVertical: 14,
-                    paddingLeft: 44,
-                    paddingRight: 14,
-                    fontSize: 15.5,
-                    fontFamily: FONT_FAMILY,
-                    backgroundColor: "#FFFFFF",
-                    borderWidth: 2,
-                    borderColor: C.blue,
-                    borderRadius: 4,
-                    color: C.ink,
-                  }}
-                />
-                <View
-                  style={{
-                    position: "absolute",
-                    left: 14,
-                    top: 14,
-                  }}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                >
-                  <SvgIcon name="search" size={18} color={C.blue} strokeWidth={2} />
-                </View>
-              </View>
-            </View>
-
-            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-              <View
+            <Pressable
+              onPress={() => pick(DEFAULT_TENANT_SLUG)}
+              accessibilityRole="button"
+              accessibilityLabel="Usa la mia posizione"
+              accessibilityLanguage="it-IT"
+              style={({ pressed }) => ({
+                width: "100%",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 9,
+                height: 54,
+                borderRadius: 999,
+                borderWidth: 1.5,
+                borderColor: C.stroke,
+                backgroundColor: C.card,
+                marginTop: 18,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              })}
+            >
+              <Icon name="map-pin" size={20} color={C.accInk} />
+              <Text style={{ fontFamily: FONT.bold, fontSize: 16, color: C.fg1 }}>
+                Usa la mia posizione
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <ScrollView
+            style={{ flex: 1, width: "100%", marginTop: 14 }}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {results.map((t: Tenant) => (
+              <Pressable
+                key={t.slug}
+                onPress={() => pick(t.slug)}
+                accessibilityRole="button"
+                accessibilityLabel={`Comune di ${t.name}, ${t.region}, ${t.provinceLabel}`}
+                accessibilityLanguage="it-IT"
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 12,
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  backgroundColor: C.locationBg,
-                  borderWidth: 1,
-                  borderColor: C.borderSoft,
-                  borderLeftWidth: 3,
-                  borderLeftColor: C.blue,
-                  borderRadius: 2,
+                  gap: 13,
+                  paddingVertical: 13,
+                  paddingHorizontal: 6,
+                  borderBottomWidth: 1,
+                  borderBottomColor: C.hairline,
                 }}
               >
-                <SvgIcon name="location" size={20} color={C.blue} />
-                <View style={{ flex: 1 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 11,
+                    backgroundColor: C.accSoft,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="compass" size={22} color={C.accInk} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <Text
-                    style={{
-                      fontSize: 13.5,
-                      color: C.ink,
-                      fontFamily: FONT_FAMILY_MEDIUM,
-                    }}
+                    numberOfLines={1}
+                    style={{ fontFamily: FONT.bold, fontSize: 16, color: C.fg1 }}
                   >
-                    Trova in base alla posizione
+                    Comune di {t.name}
                   </Text>
                   <Text
                     style={{
-                      fontSize: 12,
-                      color: C.textMuted,
-                      marginTop: 1,
-                      fontFamily: FONT_FAMILY,
+                      fontFamily: FONT.medium,
+                      fontSize: 12.5,
+                      color: C.fg3,
+                      marginTop: 2,
                     }}
                   >
-                    Permetti l'accesso alla posizione
+                    {t.region} · {t.provinceLabel}
                   </Text>
                 </View>
-                <SvgIcon name="chev" size={16} color={C.textMuted} />
-              </View>
-            </View>
-
-            <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 }}>
+                <Icon name="chevron-right" size={20} color={C.ink300} />
+              </Pressable>
+            ))}
+            {results.length === 0 && (
               <Text
+                accessibilityLanguage="it-IT"
                 style={{
-                  fontSize: 11,
-                  color: C.textMuted,
-                  fontFamily: FONT_FAMILY_BOLD,
-                  letterSpacing: 0.8,
+                  fontFamily: FONT.medium,
+                  fontSize: 14,
+                  lineHeight: 20,
+                  color: C.fg4,
+                  textAlign: "center",
+                  marginTop: 18,
                 }}
               >
-                COMUNI IN PUGLIA · A–B
+                Nessun Comune trovato. Prova con un altro nome.
               </Text>
-            </View>
-          </View>
-        }
-        ListFooterComponent={
-          <Text
-            accessibilityLanguage="it-IT"
-            style={{
-              paddingHorizontal: 20,
-              paddingTop: 24,
-              paddingBottom: 32,
-              textAlign: "center",
-              fontSize: 11.5,
-              color: C.textFaint,
-              lineHeight: 18,
-              fontFamily: FONT_FAMILY,
-            }}
-          >
-            Comuni AI è un servizio informativo. {"\n"}Per pratiche ufficiali rivolgersi sempre allo sportello comunale.
-          </Text>
-        }
-      />
-    </View>
+            )}
+          </ScrollView>
+        )}
+      </Animated.View>
+    </KeyboardAvoidingView>
   );
 }
