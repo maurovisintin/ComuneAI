@@ -7,7 +7,7 @@ import {
   SCHEMA_VERSION,
 } from "./schema";
 
-const DB_NAME = "comuni-chat.db";
+const DB_NAME = "comuneai.db";
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 

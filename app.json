@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "ComuneAI",
-    "slug": "tenant-chatbot",
-    "scheme": "comuni-chat",
+    "slug": "comuneai",
+    "scheme": "comuneai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.comunichat.app"
+      "bundleIdentifier": "it.comunichat.app"
     },
     "android": {
-      "package": "com.comunichat.app",
+      "package": "it.comunichat.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
